@@ -45,7 +45,7 @@ jobs:
           msbuild nanoFramework.CoreLibrary\CoreLibrary.nfproj /t:Rebuild /p:Configuration=Release /p:PublicRelease=true /verbosity:normal 2>&1 | Tee-Object build.log
           if ($LASTEXITCODE -ne 0) { throw 'CoreLibrary build failed.' }
           $log = Get-Content build.log -Raw
-          $hashMatch = [regex]::Match($log, 'variable=NF_NATIVE_CONTRACT_HASH[^\]]*\](0x[0-9a-fA-F]+)')
+          $hashMatch = [regex]::Match($log, 'Native contract hash:\s*(0x[0-9a-fA-F]{8})')
           if (!$hashMatch.Success) { throw 'Build did not report NF_NATIVE_CONTRACT_HASH; refusing to package an invalid contract hash.' }
           $hash = $hashMatch.Groups[1].Value
           $version = "2.0.0-local.$env:GITHUB_RUN_NUMBER"
