@@ -19,6 +19,15 @@ namespace System.Runtime.CompilerServices
         public const string ByRefLikeGenerics = nameof(ByRefLikeGenerics);
 
         /// <summary>
+        /// Identifies support for unmanaged calling conventions in function pointer signatures.
+        /// </summary>
+        /// <remarks>
+        /// Enables compiler support for these signatures. Invoking unmanaged function pointers
+        /// requires corresponding support in the native runtime.
+        /// </remarks>
+        public const string UnmanagedSignatureCallingConvention = nameof(UnmanagedSignatureCallingConvention);
+
+        /// <summary>
         /// Checks whether a certain feature is supported by the Runtime.
         /// </summary>
         public static bool IsSupported(string feature)
@@ -26,6 +35,7 @@ namespace System.Runtime.CompilerServices
             return feature switch
             {
                 ByRefLikeGenerics or
+                UnmanagedSignatureCallingConvention or
                 DefaultImplementationsOfInterfaces => true,
                 _ => false,
             };
