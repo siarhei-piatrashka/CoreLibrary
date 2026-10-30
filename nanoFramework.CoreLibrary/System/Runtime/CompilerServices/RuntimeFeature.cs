@@ -14,11 +14,17 @@ namespace System.Runtime.CompilerServices
         public const string DefaultImplementationsOfInterfaces = nameof(DefaultImplementationsOfInterfaces);
 
         /// <summary>
+        /// Indicates that this version of runtime supports unmanaged calling conventions.
+        /// </summary>
+        public const string UnmanagedSignatureCallingConvention = nameof(UnmanagedSignatureCallingConvention);
+
+        /// <summary>
         /// Checks whether a certain feature is supported by the Runtime.
         /// </summary>
         public static bool IsSupported(string feature)
         {
-            if (feature == DefaultImplementationsOfInterfaces)
+            if (feature == DefaultImplementationsOfInterfaces
+                || feature == UnmanagedSignatureCallingConvention)
             {
                 return true;
             }
