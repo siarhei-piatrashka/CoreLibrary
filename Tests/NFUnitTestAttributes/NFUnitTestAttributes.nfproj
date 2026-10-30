@@ -30,6 +30,7 @@
     <Compile Include="GetCustomAttributesGCTests.cs" />
     <Compile Include="Runtime\CompilerServices\CallerArgumentExpressionAttributeTests.cs" />
     <Compile Include="Runtime\CompilerServices\CallerMemberNameAttributeTests.cs" />
+    <Compile Include="Runtime\CompilerServices\RuntimeFeatureTests.cs" />
     <Compile Include="UnitTestAttributesTest1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
