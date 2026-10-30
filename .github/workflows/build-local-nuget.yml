@@ -1,0 +1,64 @@
+name: Build local CoreLibrary NuGet
+
+on:
+  push:
+    branches:
+      - build/local-corelibrary-nuget
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: microsoft/setup-msbuild@v2
+      - uses: NuGet/setup-nuget@v2
+      - name: Install preview nanoFramework build components
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          [xml]$feed = (Invoke-WebRequest 'https://www.vsixgallery.com/feed/author/nanoframework').Content
+          $entry = @($feed.feed.entry | Where-Object { $_.Vsix.Id -eq 'bf694e17-fa5f-4877-9317-6d3664b2689a' })[0]
+          if (!$entry) { throw 'Preview VS2022 extension not found in gallery feed.' }
+          $archive = Join-Path $env:RUNNER_TEMP 'nanoFramework.zip'
+          $expanded = Join-Path $env:RUNNER_TEMP 'nanoFramework'
+          Invoke-WebRequest $entry.content.src -OutFile $archive
+          Expand-Archive $archive $expanded
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -property installationPath
+          Copy-Item (Join-Path $expanded '$MSBuild\nanoFramework') (Join-Path $vs 'MSBuild') -Recurse
+      - name: Restore
+        shell: pwsh
+        run: |
+          nuget restore nanoFramework.CoreLibrary.sln -NonInteractive
+          if ($LASTEXITCODE -ne 0) { throw 'NuGet restore failed.' }
+      - name: Build and pack
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          msbuild nanoFramework.CoreLibrary\CoreLibrary.nfproj /t:Rebuild /p:Configuration=Release /p:PublicRelease=true /verbosity:normal 2>&1 | Tee-Object build.log
+          if ($LASTEXITCODE -ne 0) { throw 'CoreLibrary build failed.' }
+          $log = Get-Content build.log -Raw
+          $hashMatch = [regex]::Match($log, 'variable=NF_NATIVE_CONTRACT_HASH[^\]]*\](0x[0-9a-fA-F]+)')
+          if (!$hashMatch.Success) { throw 'Build did not report NF_NATIVE_CONTRACT_HASH; refusing to package an invalid contract hash.' }
+          $hash = $hashMatch.Groups[1].Value
+          $version = "2.0.0-local.$env:GITHUB_RUN_NUMBER"
+          nuget pack nanoFramework.CoreLibrary.nuspec -Version $version -Properties "commit=$env:GITHUB_SHA;nativeContractHash=$hash" -OutputDirectory artifacts -NonInteractive
+          if ($LASTEXITCODE -ne 0) { throw 'NuGet pack failed.' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CoreLibrary-NuGet
+          path: artifacts/*.nupkg
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: CoreLibrary-build-log
+          path: build.log
+          if-no-files-found: ignore
