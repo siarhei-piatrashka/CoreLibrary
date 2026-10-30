@@ -171,6 +171,7 @@
     <Compile Include="System\Runtime\CompilerServices\CallerArgumentExpressionAttribute.cs" />
     <Compile Include="System\Runtime\CompilerServices\CallerMemberNameAttribute.cs" />
     <Compile Include="System\Runtime\CompilerServices\AccessedThroughPropertyAttribute.cs" />
+    <Compile Include="System\Runtime\CompilerServices\CallingConvention.cs" />
     <Compile Include="System\Runtime\CompilerServices\ExcludeTypeAttribute.cs" />
     <Compile Include="System\Runtime\CompilerServices\ExtensionAttribute.cs" />
     <Compile Include="System\Runtime\CompilerServices\IndexerNameAttribute.cs" />
