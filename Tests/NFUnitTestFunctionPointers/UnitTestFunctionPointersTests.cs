@@ -105,6 +105,73 @@ namespace NFUnitTestFunctionPointers
             Assert.AreEqual(42, value);
         }
 
+        private static void ReplaceString(ref string value) => value = "changed";
+        private static ref string StringElementAt(string[] values, int index) => ref values[index];
+        private static ref Large LargeElementAt(Large[] values, int index) => ref values[index];
+        private static void ReplaceOperation(ref delegate*<int, int, int> operation) => operation = &Mul;
+        private static ref delegate*<int, int, int> OperationElementAt(delegate*<int, int, int>[] operations, int index) => ref operations[index];
+        private enum WideMode : long { Low = 1, High = 0x100000001L }
+        private static WideMode ToggleMode(WideMode mode) => mode == WideMode.Low ? WideMode.High : WideMode.Low;
+        private static void SetMode(ref WideMode mode) => mode = WideMode.High;
+
+        [TestMethod]
+        public void FunctionPointer_ByRefReferenceTypes()
+        {
+            delegate* managed<ref string, void> replace = &ReplaceString;
+            string value = "old";
+            replace(ref value);
+            Assert.AreEqual("changed", value);
+
+            delegate*<string[], int, ref string> elementAt = &StringElementAt;
+            string[] values = { "a", "b" };
+            ref string element = ref elementAt(values, 1);
+            element = "updated";
+            Assert.AreEqual("a", values[0]);
+            Assert.AreEqual("updated", values[1]);
+        }
+
+        [TestMethod]
+        public void FunctionPointer_ByRefStructReturn()
+        {
+            delegate*<Large[], int, ref Large> elementAt = &LargeElementAt;
+            Large[] values = new Large[1];
+            ref Large element = ref elementAt(values, 0);
+            element.Name = "root";
+            element.P = new Point(3, 4);
+
+            Assert.AreEqual("root", values[0].Name);
+            Assert.AreEqual(3, values[0].P.X);
+            Assert.AreEqual(4, values[0].P.Y);
+        }
+
+        [TestMethod]
+        public void FunctionPointer_ByRefNestedFunctionPointer()
+        {
+            delegate*<ref delegate*<int, int, int>, void> replace = &ReplaceOperation;
+            delegate*<int, int, int> operation = &Add;
+            replace(ref operation);
+            Assert.AreEqual(12, operation(3, 4));
+
+            delegate*<delegate*<int, int, int>[], int, ref delegate*<int, int, int>> elementAt = &OperationElementAt;
+            delegate*<int, int, int>[] operations = new delegate*<int, int, int>[1];
+            operations[0] = &Add;
+            ref delegate*<int, int, int> element = ref elementAt(operations, 0);
+            element = &Mul;
+            Assert.AreEqual(12, operations[0](3, 4));
+        }
+
+        [TestMethod]
+        public void FunctionPointer_WideEnum()
+        {
+            delegate*<WideMode, WideMode> toggle = &ToggleMode;
+            Assert.AreEqual(0x100000001L, (long)toggle(WideMode.Low));
+
+            delegate*<ref WideMode, void> set = &SetMode;
+            WideMode mode = WideMode.Low;
+            set(ref mode);
+            Assert.AreEqual(0x100000001L, (long)mode);
+        }
+
         [TestMethod]
         public void FunctionPointer_ReferenceTypeParameters()
         {
