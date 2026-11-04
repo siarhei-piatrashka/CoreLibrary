@@ -42,6 +42,16 @@ namespace NFUnitTestFunctionPointers
         private static int IgnoreLongPointer(delegate*<long, long> function, int value) => value;
         private static void Increment(ref int value) => value++;
         private static int Length(int[] values) => values.Length;
+        private static void SetValue<T>(ref T value, T replacement) => value = replacement;
+        private static ref T ElementAt<T>(T[] values, int index) => ref values[index];
+        private static ref T ApplyElementAt<T>(delegate*<T[], int, ref T> function, T[] values, int index) => ref function(values, index);
+        private static delegate*<T[], int, ref T> MakeElementAt<T>() => &ElementAt<T>;
+
+        private static void OpenSetValue<T>(ref T value, T replacement)
+        {
+            delegate*<ref T, T, void> set = &SetValue<T>;
+            set(ref value, replacement);
+        }
 
         private static bool Throws(delegate*<void> action)
         {
@@ -130,6 +140,51 @@ namespace NFUnitTestFunctionPointers
 
             Assert.AreEqual(5, identityInt(5));
             Assert.AreEqual("x", identityString("x"));
+        }
+
+        [TestMethod]
+        public void GenericFunctionPointer_ByRefParameters()
+        {
+            delegate*<ref string, string, void> setString = &SetValue<string>;
+            string text = "old";
+            setString(ref text, "new");
+            Assert.AreEqual("new", text);
+
+            delegate*<ref Point, Point, void> setPoint = &SetValue<Point>;
+            Point point = new Point();
+            setPoint(ref point, new Point(3, 4));
+            Assert.AreEqual(3, point.X);
+            Assert.AreEqual(4, point.Y);
+
+            int number = 0;
+            OpenSetValue<int>(ref number, 42);
+            OpenSetValue<string>(ref text, "open");
+            Assert.AreEqual(42, number);
+            Assert.AreEqual("open", text);
+        }
+
+        [TestMethod]
+        public void GenericFunctionPointer_ByRefReturns()
+        {
+            delegate*<int[], int, ref int> elementAt = &ElementAt<int>;
+            int[] numbers = { 1, 2 };
+            ref int number = ref elementAt(numbers, 1);
+            number = 42;
+            Assert.AreEqual(1, numbers[0]);
+            Assert.AreEqual(42, numbers[1]);
+
+            string[] texts = { "old" };
+            ref string text = ref ApplyElementAt<string>(&ElementAt<string>, texts, 0);
+            text = "new";
+            Assert.AreEqual("new", texts[0]);
+
+            Point[] points = new Point[1];
+            delegate*<Point[], int, ref Point> open = MakeElementAt<Point>();
+            ref Point point = ref open(points, 0);
+            point.X = 3;
+            point.Y = 4;
+            Assert.AreEqual(3, points[0].X);
+            Assert.AreEqual(4, points[0].Y);
         }
 
         [TestMethod]
