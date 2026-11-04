@@ -394,6 +394,44 @@ namespace NFUnitTestFunctionPointers
 
         private static VarianceBox<T> MakeVarianceBox<T>() => new VarianceBox<T>();
 
+        private static delegate*<T, T>[] MakeIdentityArray<T>()
+        {
+            var functions = new delegate*<T, T>[1];
+            functions[0] = &Identity<T>;
+            return functions;
+        }
+
+        private static string DescribeIdentityArray<T>(delegate*<T, T>[] functions)
+        {
+            delegate*<delegate*<T, T>[], string> describe = &Describe;
+            return describe(functions);
+        }
+
+        private static delegate*<T, T>[] ReturnIdentityArray<T>(delegate*<T, T>[] functions) => functions;
+
+        private static object IdentityArrayAsObject<T>(delegate*<T, T>[] functions)
+        {
+            delegate*<delegate*<T, T>[], object> identity = &ReturnIdentityArray<T>;
+            return identity(functions);
+        }
+
+        [TestMethod]
+        public void GenericFunctionPointer_ArrayReferenceConversions()
+        {
+            var integers = MakeIdentityArray<int>();
+            var strings = MakeIdentityArray<string>();
+
+            Assert.AreEqual("object", DescribeIdentityArray<int>(integers));
+            Assert.AreEqual("object", DescribeIdentityArray<string>(strings));
+            Assert.AreEqual(42, integers[0](42));
+            Assert.AreEqual("ok", strings[0]("ok"));
+
+            integers = (delegate*<int, int>[])IdentityArrayAsObject<int>(integers);
+            strings = (delegate*<string, string>[])IdentityArrayAsObject<string>(strings);
+            Assert.AreEqual(42, integers[0](42));
+            Assert.AreEqual("ok", strings[0]("ok"));
+        }
+
         [TestMethod]
         public void GenericFunctionPointer_Comparisons()
         {

@@ -506,6 +506,98 @@ namespace NFUnitTestFunctionPointers
             Assert.AreEqual("x", value);
         }
 
+        private static delegate*<int, int, int>[] MakeOperations()
+        {
+            var operations = new delegate*<int, int, int>[1];
+            operations[0] = &Add;
+            return operations;
+        }
+
+        [TestMethod]
+        public void FunctionPointer_ArrayReferenceConversions()
+        {
+            var operations = MakeOperations();
+            delegate*<delegate*<int, int, int>[], int> length = &ArrayLength;
+            Assert.AreEqual(1, length(operations));
+
+            delegate*<delegate*<int, int, int>[], bool> isNull = &IsNullObject;
+            Assert.IsFalse(isNull(operations));
+            Assert.IsTrue(isNull(null));
+
+            delegate*<object> makeObject = &MakeOperations;
+            var returned = (delegate*<int, int, int>[])makeObject();
+            Assert.AreEqual(7, returned[0](3, 4));
+
+            delegate*<Array> makeArray = &MakeOperations;
+            Assert.AreEqual(1, makeArray().Length);
+
+            delegate*<delegate*<int, int, int>[][], int> jaggedLength = &ObjectArrayLength;
+            var jagged = new delegate*<int, int, int>[2][];
+            jagged[0] = operations;
+            Assert.AreEqual(2, jaggedLength(jagged));
+
+            delegate*<object, bool> exact = &IsNullObject;
+            delegate*<delegate*<int, int, int>[], bool> converted = exact;
+            Assert.IsFalse(converted(operations));
+        }
+
+        private static bool IsNullObject(object value) => value == null;
+        private static int IntArrayLength(int[] values) => values.Length;
+        private static int LongOperationArrayLength(delegate*<long, long>[] values) => values.Length;
+
+        [TestMethod]
+        public void FunctionPointer_IncompatibleArrayConversionsAreRejected()
+        {
+            var operations = MakeOperations();
+            delegate*<delegate*<int, int, int>[], int> integers =
+                (delegate*<delegate*<int, int, int>[], int>)(delegate*<int[], int>)&IntArrayLength;
+            delegate*<delegate*<int, int, int>[], int> wrongSignature =
+                (delegate*<delegate*<int, int, int>[], int>)(delegate*<delegate*<long, long>[], int>)&LongOperationArrayLength;
+            delegate*<delegate*<int, int, int>[], int> objects =
+                (delegate*<delegate*<int, int, int>[], int>)(delegate*<object[], int>)&ObjectArrayLength;
+            delegate*<delegate*<int, int, int>, bool> scalar =
+                (delegate*<delegate*<int, int, int>, bool>)(delegate*<object, bool>)&IsNullObject;
+            int rejected = 0;
+
+            try
+            {
+                integers(operations);
+            }
+            catch (Exception)
+            {
+                rejected++;
+            }
+
+            try
+            {
+                wrongSignature(operations);
+            }
+            catch (Exception)
+            {
+                rejected++;
+            }
+
+            try
+            {
+                objects(operations);
+            }
+            catch (Exception)
+            {
+                rejected++;
+            }
+
+            try
+            {
+                scalar(&Add);
+            }
+            catch (Exception)
+            {
+                rejected++;
+            }
+
+            Assert.AreEqual(4, rejected);
+        }
+
         private static string ObjectToString(object value) => "s:" + value.ToString();
         private static FpDog MakeDog(FpAnimal animal) => new FpDog();
         private static FpAnimal MakeAnimal() => new FpAnimal();
